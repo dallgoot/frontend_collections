@@ -1,29 +1,45 @@
-    function TypeWriter(selector, phrases, interval, loop) {
-        var target = document.querySelector(selector);// HTML element that will contain the text
-        if (!target) throw new Error ("Selector '"+selector+"' is empty");
+function TypeWriter(selector, phrases, interval, loop) {
+    var target = document.querySelector(selector);// HTML element that will contain the text
+    if (!target) console.error("Selector '" + selector + "' is empty");
 
-        var interval = interval || 100;//time between each letters
-        var loop = loop || false;
-        var pauseTime = 1000; // time between each phrase
-        var Typer = function() {
-            if(this.pointer === 0) this.target.innerHTML = '';
-            if(this.target.innerHTML !== this.phrase) {
-                this.target.innerHTML += this.phrase.charAt(this.pointer++);
-            } else {
-                clearInterval(this.intervalObject);
-                if (this.callbackOnEnd) setTimeout(this.callbackOnEnd, pauseTime);
+    var interval = interval || 100,//time between each letters
+        pauseTime = 1000, // time between each phrase
+        Typer = function (phrase, callbackOnEnd) {
+            this.pointer = 0;
+            this.phrase = phrase;
+            this.callbackOnEnd = callbackOnEnd;
+        };
+    Typer.prototype.target = target;
+    Typer.prototype.update = function () {
+        if (this.pointer === 0) {
+            this.target.innerText = '';
+        }
+        if (this.target.innerText !== this.phrase) {
+            this.target.innerText += this.phrase.charAt(this.pointer++);
+        } else {
+            clearInterval(this.intervalObject);
+            if (this.callbackOnEnd) {
+                setTimeout(this.callbackOnEnd, pauseTime);
             }
+        }
+    };
+    var setupTyper = function (callback, phrase) {
+        var t = new Typer(phrase, callback);
+        return function() {
+             t.intervalObject = setInterval(t.update.bind(t), interval);
         };
-        var setupTyper = function (phrase, callback) {
-            var typerObject = { target: target,
-                                phrase: phrase,
-                                pointer: 0,
-                                callbackOnEnd : callback };
-            return function() { typerObject.intervalObject = setInterval(Typer.bind(typerObject), interval); };
-        };
-        phrases.reverse().reduce(function(callback, phrase) { return setupTyper(phrase, callback);}, // the reducer function always return a Typer
-                                 loop ? function(){ TypeWriter(selector, phrases.reverse(), interval, loop) } : false  //the initial accumulator value
-                                 )();
-    }
+    };
+    var onLoop = function () {
+        TypeWriter(selector, phrases, interval, loop);
+    };
+    // the reducer function always return a Typer
+    var starter = phrases.reverse().reduce(setupTyper, loop ? onLoop : null  /*the initial accumulator value*/);
+    phrases.reverse();
+    starter();
+}
 
-    TypeWriter("#notepad", ['comment ça va les mauristes?', 'la pèche dans le confinement ?', '3ème phrase', '4ème phrase'], 80, true);
+jQuery(document).ready( function($){
+    if ($("#notepad")) {
+        TypeWriter("#notepad", bandeaunews, 80, true);
+    }
+});
